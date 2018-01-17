@@ -26,7 +26,7 @@ trait GcsKeys {
     * The task "gcsUpload" uploads a list of files to specified URLs on Google Cloud Storage.
     * Depends on:
     *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
-    *                      as stated [here](https://developers.google.com/identity/protocols/application-default-credentials)
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
     *   - `mappings`: source file -> destination URL mappings.
     *
     * Returns: a sequence of uploaded object URLs.
@@ -37,7 +37,7 @@ trait GcsKeys {
     * The task "gcsDownload" downloads a lust of objects on Google Cloud Storage to specified files.
     * Depends on:
     *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
-    *                      as stated [here](https://developers.google.com/identity/protocols/application-default-credentials)
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
     *   - `mappings`: destination file <- source URL mappings.
     *
     * Returns: a sequence of downloaded files.
