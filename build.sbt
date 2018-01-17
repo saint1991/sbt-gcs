@@ -9,7 +9,8 @@ lazy val root = (project in file(".")).
     scalaVersion := "2.12.4",
     crossSbtVersions := Seq("0.13.16", "1.1.0"),
     libraryDependencies ++= Seq(
-      "com.google.cloud" % "google-cloud-storage" % "1.14.0"
+      "com.google.cloud" % "google-cloud-storage" % "1.14.0",
+      "org.scalatest" %% "scalatest" % "3.0.4" % Test
     ),
     mainClass := Some("com.github.saint1991.sbt.gcs.Main")
   ).
