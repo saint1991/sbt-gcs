@@ -22,13 +22,48 @@ trait GcsKeys {
 
   type Credentials = com.google.auth.Credentials
 
-  // tasks
+  /**
+    * The task "gcsUpload" uploads a list of files to specified URLs on Google Cloud Storage.
+    * Depends on:
+    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
+    *   - `mappings`: source file -> destination URL mappings.
+    *
+    * Returns: a sequence of uploaded object URLs.
+    */
   val gcsUpload = TaskKey[Seq[String]]("gcs-upload", "Uploads files to a bucket on Google Cloud Storage.")
+
+  /**
+    * The task "gcsDownload" downloads a lust of objects on Google Cloud Storage to specified files.
+    * Depends on:
+    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
+    *   - `mappings`: destination file <- source URL mappings.
+    *
+    * Returns: a sequence of downloaded files.
+    */
   val gcsDownload = TaskKey[Seq[File]]("gcs-download", "Downloads objects from Google Cloud Storage.")
+
+  /**
+    * The task "gcsDelete" deletes a specified list of objects from Google Cloud Storage.
+    * Depends on:
+    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
+    *                      as stated [here](https://developers.google.com/identity/protocols/application-default-credentials)
+    *   - `gcsUrls`:       a list of object URLs to delete from Google Cloud Storage.
+    *
+    * Returns: a sequence of deleted object URLs. Note that those of inexistent objects are not included in the result.
+    */
   val gcsDelete = TaskKey[Seq[String]]("gcs-delete", "Deletes files from a bucket on Google Cloud Storage.")
 
-  // settings
+
+  /**
+    * Credential to authenticate Google Cloud Storage (optional).
+    */
   val gcsCredential = SettingKey[Option[Credentials]]("credential", "Credential to authenticate Google Cloud Storage")
+
+  /**
+    * a list of object URLs on which a certain operation should be performed.
+    */
   val gcsUrls = TaskKey[Seq[String]]("gcs-urls", "URLs of objects on Google Cloud Storage")
 }
 

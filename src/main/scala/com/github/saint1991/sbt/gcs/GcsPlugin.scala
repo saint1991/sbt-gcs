@@ -27,7 +27,9 @@ import sbt.util.Logger
 
 import com.google.cloud.storage.{Storage, StorageOptions}
 
-
+/**
+  * GcsPlugin is a sbt plugin that can perform basic operations on objects on Google Cloud Storage.
+  */
 object GcsPlugin extends AutoPlugin {
 
   override def trigger = allRequirements
@@ -60,7 +62,7 @@ object GcsPlugin extends AutoPlugin {
           logger.info(s"Uploaded ${cmpSrc.getAbsoluteFile} to ${cmpDest.url}")
           cmpDest.url
         }
-      }), 30 seconds)
+      }), 1 minute)
     }).value,
 
     gcsDownload := gcsInitTask[(File, String), File](gcsDownload, mappings, { (storage, downloadMappings, logger) =>
@@ -69,7 +71,7 @@ object GcsPlugin extends AutoPlugin {
           logger.info(s"Downloaded ${cmpDest.getAbsoluteFile} from ${cmpSrc.url}")
           cmpDest
         }
-      }), 30 seconds)
+      }), 1 minute)
     }).value,
 
     gcsDelete := gcsInitTask[String, String](gcsDelete, gcsUrls, { (storage, deleteUrls, logger) =>
@@ -82,7 +84,7 @@ object GcsPlugin extends AutoPlugin {
             logger.info(s"Deleted ${cmpUrl.url}")
             Some(cmpUrl.url)
         }
-      }), 30 seconds).flatten
+      }), 1 minute).flatten
     }).value,
 
     gcsCredential := None,

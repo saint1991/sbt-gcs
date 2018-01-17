@@ -26,11 +26,21 @@ import ExecutionContext.Implicits.global
 import sbt._
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 
-
+/**
+  * Basic operations against Google Cloud Storage
+  */
 object Gcs {
 
   private final val BufferSize = 4096
 
+  /**
+    * Upload *src* file to the *dest* URL on Google Cloud Storage.
+    * This method is executed asynchronously.
+    * @param storage Storage object
+    * @param src a file to upload
+    * @param dest a destination URL to which upload a file
+    * @return the tuple of completed upload pair (src, dest) as a Future
+    */
   def upload(storage: Storage)(src: File, dest: GcsObjectUrl): Future[(File, GcsObjectUrl)] = Future {
 
     val blobInfo = BlobInfo
@@ -52,7 +62,14 @@ object Gcs {
     (src, dest)
   }
 
-
+  /**
+    * Download *src* object from Google Cloud Storage as the *src* file.
+    * This method is executed asynchronously.
+    * @param storage Storage object
+    * @param src the URL of an object to download
+    * @param dest a destination file
+    * @return the tuple of completed download pair (src, dest) as a Future
+    */
   def download(storage: Storage)(src: GcsObjectUrl, dest: File): Future[(GcsObjectUrl, File)] = Future {
 
     using(storage.reader(src.bucket, src.prefix)) { blob =>
@@ -71,6 +88,12 @@ object Gcs {
   }
 
 
+  /**
+    * Delete *target* object from Google Cloud Storage.
+    * @param storage Storage object
+    * @param target the URL of an object to delete
+    * @return URL that is completed deleting. If the object does not exist, this returns None.
+    */
   def delete(storage: Storage)(target: GcsObjectUrl): Future[Option[GcsObjectUrl]] = Future {
     if (storage.delete(BlobId.of(target.bucket, target.prefix))) Some(target)
     else None
