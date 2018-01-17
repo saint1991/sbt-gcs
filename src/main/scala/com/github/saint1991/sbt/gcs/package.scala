@@ -21,7 +21,15 @@ import scala.util.control.Exception._
 
 package object gcs {
 
-  def using[
+  /**
+    * Utility for Load Pattern
+    * @param resource closable resource
+    * @param f operation using the resource
+    * @tparam Return type of result of f
+    * @tparam Resource type of closable Resource
+    * @return
+    */
+  private [gcs] def using[
     Return,
     Resource <: { def close(): Unit }
   ](resource: Resource)(f: Resource => Return): Return = allCatch andFinally {
