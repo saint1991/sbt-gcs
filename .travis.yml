@@ -5,3 +5,4 @@ jdk:
   - oraclejdk8
 script:
   - sbt headerCheck
+  - sbt ++$TRAVIS_SCALA_VERSION test
