@@ -1,5 +1,6 @@
 
 lazy val root = (project in file(".")).
+  enablePlugins(GitVersioning).
   settings(
     name := "sbt-gcs",
     organization := "com.github.saint1991",
