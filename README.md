@@ -40,7 +40,7 @@ $ sbt gcsUpload
 ```
 
 
-## Downloading
+### Downloading
 
 Similarly, to download objects from Google Cloud Storage, you also need to specify mappings.
 Please note that you need to write it in the destination -> source order.
@@ -62,7 +62,7 @@ $ sbt gcsDownload
 ```
 
 
-## Deleting
+### Deleting
 
 To delete objects from Google Cloud Storage, you need to specify a list of 
 object URLs to delete via the `gcsUrls` key.
