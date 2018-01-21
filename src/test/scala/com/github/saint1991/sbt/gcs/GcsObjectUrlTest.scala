@@ -19,8 +19,8 @@ class GcsObjectUrlTest extends WordSpec with Matchers {
 
     "URL is invalid" should {
       "throw IllegalArgumentException" in {
-        an [IllegalArgumentException] should be thrownBy GcsObjectUrl("http://path")
-        an [IllegalArgumentException] should be thrownBy GcsObjectUrl("a+a3_.", "path/to/object.json")
+        an [IllegalArgumentException] should be thrownBy GcsObjectUrl("http://bucket/path/to/object.json")
+        an [IllegalArgumentException] should be thrownBy GcsObjectUrl("bucke+t_.", "path/to/object.json")
       }
     }
 

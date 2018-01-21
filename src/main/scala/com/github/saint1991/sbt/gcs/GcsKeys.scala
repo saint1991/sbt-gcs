@@ -16,6 +16,8 @@
 
 package com.github.saint1991.sbt.gcs
 
+import scala.concurrent.duration.FiniteDuration
+
 import sbt._
 
 trait GcsKeys {
@@ -59,12 +61,22 @@ trait GcsKeys {
   /**
     * Credential to authenticate Google Cloud Storage (optional).
     */
-  val gcsCredential = SettingKey[Option[Credentials]]("credential", "Credential to authenticate Google Cloud Storage")
+  val gcsCredential = SettingKey[Option[Credentials]]("gcs-credential", "Credential to authenticate Google Cloud Storage")
 
   /**
     * a list of object URLs on which a certain operation should be performed.
     */
   val gcsUrls = TaskKey[Seq[String]]("gcs-urls", "URLs of objects on Google Cloud Storage")
+
+  /**
+    * Maximum parallelism of executing operations (i.e. uploading, downloading, deleting).
+    */
+  val gcsOperationParallelism = SettingKey[Int]("gcs-task-parallelism", "Maximum parallelism of operations.")
+
+  /**
+    * Timeout for each operation against single object.
+    */
+  val gcsOperationTimeout = SettingKey[FiniteDuration]("gcs-operation-timeout", "Timeout for each operation.")
 }
 
 object GcsKeys extends GcsKeys

@@ -1,4 +1,8 @@
 
+val googleCloudVersion = "1.15.0"
+val monixVersion = "2.3.2"
+val scalaTestVersion = "3.0.4"
+
 lazy val root = (project in file(".")).
   enablePlugins(GitVersioning).
   settings(
@@ -8,12 +12,12 @@ lazy val root = (project in file(".")).
     description := "GCS Plugin for sbt",
     sbtPlugin := true,
     scalaVersion := "2.12.4",
-    crossSbtVersions := Seq("0.13.16", "1.1.0"),
+    sbtVersion := "1.1.0",
     libraryDependencies ++= Seq(
-      "com.google.cloud" % "google-cloud-storage" % "1.14.0",
-      "org.scalatest" %% "scalatest" % "3.0.4" % Test
-    ),
-    mainClass := Some("com.github.saint1991.sbt.gcs.Main")
+      "com.google.cloud" % "google-cloud-storage" % googleCloudVersion,
+      "io.monix" %% "monix" % monixVersion,
+      "org.scalatest" %% "scalatest" % scalaTestVersion % Test
+    )
   ).
   settings(
     publishMavenStyle := false,

@@ -21,6 +21,8 @@ import scala.util.control.Exception._
 
 package object gcs {
 
+  type Parallelism = Int
+
   /**
     * Utility for Load Pattern
     * @param resource closable resource
