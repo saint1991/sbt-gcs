@@ -20,8 +20,7 @@ import java.io.{BufferedInputStream, BufferedOutputStream, FileInputStream, File
 import java.nio.ByteBuffer
 import java.nio.file.Files
 
-import scala.concurrent._
-import ExecutionContext.Implicits.global
+import monix.eval.Task
 
 import sbt._
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
@@ -29,9 +28,9 @@ import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
 /**
   * Basic operations against Google Cloud Storage
   */
-object Gcs {
+object GcsTasks {
 
-  private final val BufferSize = 4096
+  protected final val BufferSize = 4096
 
   /**
     * Upload *src* file to the *dest* URL on Google Cloud Storage.
@@ -41,7 +40,7 @@ object Gcs {
     * @param dest a destination URL to which upload a file
     * @return the tuple of completed upload pair (src, dest) as a Future
     */
-  def upload(storage: Storage)(src: File, dest: GcsObjectUrl): Future[(File, GcsObjectUrl)] = Future {
+  def upload(storage: Storage, src: File, dest: GcsObjectUrl): Task[(File, GcsObjectUrl)] = Task {
 
     val blobInfo = BlobInfo
       .newBuilder(dest.bucket, dest.prefix)
@@ -60,7 +59,8 @@ object Gcs {
     }
 
     (src, dest)
-  }
+
+  }.memoizeOnSuccess
 
   /**
     * Download *src* object from Google Cloud Storage as the *src* file.
@@ -70,7 +70,7 @@ object Gcs {
     * @param dest a destination file
     * @return the tuple of completed download pair (src, dest) as a Future
     */
-  def download(storage: Storage)(src: GcsObjectUrl, dest: File): Future[(GcsObjectUrl, File)] = Future {
+  def download(storage: Storage, src: GcsObjectUrl, dest: File): Task[(GcsObjectUrl, File)] = Task {
 
     using(storage.reader(src.bucket, src.prefix)) { blob =>
       using(new BufferedOutputStream(new FileOutputStream(dest))) { fstream =>
@@ -85,18 +85,21 @@ object Gcs {
     }
 
     (src, dest)
-  }
+
+  }.memoizeOnSuccess
 
 
   /**
     * Delete *target* object from Google Cloud Storage.
     * @param storage Storage object
     * @param target the URL of an object to delete
-    * @return URL that is completed deleting. If the object does not exist, this returns None.
+    * @return Right of URL that is completed deleting or Left of URL if the object does not exist.
     */
-  def delete(storage: Storage)(target: GcsObjectUrl): Future[Option[GcsObjectUrl]] = Future {
-    if (storage.delete(BlobId.of(target.bucket, target.prefix))) Some(target)
-    else None
-  }
+  def delete(storage: Storage, target: GcsObjectUrl): Task[Either[GcsObjectUrl, GcsObjectUrl]] = Task {
+
+    if (storage.delete(BlobId.of(target.bucket, target.prefix))) Right(target)
+    else Left(target)
+
+  }.memoizeOnSuccess
 
 }

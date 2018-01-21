@@ -9,7 +9,7 @@ sbt-gcs is a simple sbt plugin to manipulate objects on Google Cloud Storage.
 
 ## Install
 
-As a prerequisite, sbt 0.13.16 or newer is required.  
+As a prerequisite, sbt 1.0.0 or newer is required.  
 In order to add the sbt-gcs plugin to your build, add the following to `project/plugins.sbt`.
 
 
