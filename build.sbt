@@ -1,6 +1,6 @@
 
 val googleCloudVersion = "1.15.0"
-val monixVersion = "2.3.2"
+val monixVersion = "2.3.3"
 val scalaTestVersion = "3.0.4"
 
 lazy val root = (project in file(".")).
@@ -15,7 +15,7 @@ lazy val root = (project in file(".")).
     sbtVersion := "1.1.0",
     libraryDependencies ++= Seq(
       "com.google.cloud" % "google-cloud-storage" % googleCloudVersion,
-      "io.monix" %% "monix" % monixVersion,
+      "io.monix" %% "monix-reactive" % monixVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % Test
     )
   ).

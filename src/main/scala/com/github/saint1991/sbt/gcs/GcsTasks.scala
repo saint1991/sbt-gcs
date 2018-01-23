@@ -16,31 +16,79 @@
 
 package com.github.saint1991.sbt.gcs
 
-import java.io.{BufferedInputStream, BufferedOutputStream, FileInputStream, FileOutputStream}
-import java.nio.ByteBuffer
+import java.io._
 import java.nio.file.Files
 
-import monix.eval.Task
+import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 import sbt._
-import com.google.cloud.storage.{BlobId, BlobInfo, Storage}
+import com.google.cloud.storage.{BlobId, BlobInfo}
+import monix.eval.Task
+import monix.execution.{Ack, Scheduler}
+import monix.execution.Ack.Continue
+import monix.reactive._
+import monix.reactive.observables.ConnectableObservable
+
 
 /**
-  * Basic operations against Google Cloud Storage
+  * Observer that simply copies bytes to OutputStream
+  */
+private [gcs] class StreamCopyObserver(out: OutputStream) extends Observer[Array[Byte]] {
+  override def onComplete(): Unit = ()
+  override def onError(ex: Throwable): Unit = throw ex
+  override def onNext(elem: Array[Byte]): Future[Ack] = {
+    out.write(elem)
+    Continue
+  }
+}
+
+/**
+  * Logic of operations against Google Cloud Storage
   */
 object GcsTasks {
+  import Converters._
 
-  protected final val BufferSize = 4096
+  /**
+    * Delete *target* object from Google Cloud Storage.
+    * @param target
+    * @return Left if the object does not exist otherwise returns Right as the task execution.
+    */
+  def delete(config: GcsTaskConfig)(target: GcsObjectUrl): Task[Either[GcsObjectUrl, GcsObjectUrl]] = Task {
+    if (config.storage.delete(BlobId.of(target.bucket, target.prefix))) Right(target)
+    else Left(target)
+  }.memoizeOnSuccess
+
+
+  /**
+    * Factory of stream copy task with given observers.
+    * @param in
+    * @param out
+    * @param scheduler
+    * @return
+    */
+  private [gcs] def copyStream(config: GcsTaskConfig)(in: InputStream, out:OutputStream)
+                              (implicit scheduler: Scheduler): ConnectableObservable[Array[Byte]] = {
+    val blueprint = (new StreamCopyObserver(out) +: config.observers).foldLeft(
+      Observable.fromInputStream(in, config.chunkSize).multicast(Pipe(MulticastStrategy.publish[Array[Byte]]))
+    ) { (acc, o) =>
+      acc.subscribe(o)
+      acc
+    }
+    blueprint.connect()
+    blueprint
+  }
+
 
   /**
     * Upload *src* file to the *dest* URL on Google Cloud Storage.
-    * This method is executed asynchronously.
-    * @param storage Storage object
-    * @param src a file to upload
-    * @param dest a destination URL to which upload a file
-    * @return the tuple of completed upload pair (src, dest) as a Future
+    * @param src
+    * @param dest
+    * @param scheduler
+    * @return the tuple of uploaded (src, dest) pair as the result of task execution.
     */
-  def upload(storage: Storage, src: File, dest: GcsObjectUrl): Task[(File, GcsObjectUrl)] = Task {
+  def upload(config: GcsTaskConfig)(src: File, dest: GcsObjectUrl)
+            (implicit scheduler: Scheduler): Task[(File, GcsObjectUrl)] = {
 
     val blobInfo = BlobInfo
       .newBuilder(dest.bucket, dest.prefix)
@@ -50,56 +98,31 @@ object GcsTasks {
       })
       .build()
 
-    using(new BufferedInputStream(new FileInputStream(src))) { fstream =>
-      using(storage.writer(blobInfo)) { blob =>
-        var len = 0
-        val buf = new Array[Byte](BufferSize)
-        while ({ len = fstream.read(buf); len > 0 }) blob.write(ByteBuffer.wrap(buf, 0, len))
+    Task {
+      using(new BufferedInputStream(new FileInputStream(src))) { in =>
+        using(config.storage.writer(blobInfo).asOutputStream) { out =>
+          Await.ready(copyStream(config)(in, out).foreach(_ => ()), config.timeout)
+        }
       }
-    }
-
-    (src, dest)
-
-  }.memoizeOnSuccess
+      (src, dest)
+    }.memoizeOnSuccess
+  }
 
   /**
     * Download *src* object from Google Cloud Storage as the *src* file.
-    * This method is executed asynchronously.
-    * @param storage Storage object
-    * @param src the URL of an object to download
-    * @param dest a destination file
-    * @return the tuple of completed download pair (src, dest) as a Future
+    * @param src
+    * @param dest
+    * @param scheduler
+    * @return the tuple of downloaded (src, dest) pair as the result of task execution.
     */
-  def download(storage: Storage, src: GcsObjectUrl, dest: File): Task[(GcsObjectUrl, File)] = Task {
-
-    using(storage.reader(src.bucket, src.prefix)) { blob =>
-      using(new BufferedOutputStream(new FileOutputStream(dest))) { fstream =>
-        var len = 0
-        val buf = ByteBuffer.wrap(new Array[Byte](BufferSize))
-        while ({ len = blob.read(buf); len > 0 }) {
-          fstream.write(buf.array(), buf.arrayOffset(), len)
-          buf.clear()
-        }
-        fstream.flush()
+  def download(config: GcsTaskConfig)(src: GcsObjectUrl, dest: File)
+              (implicit scheduler: Scheduler): Task[(GcsObjectUrl, File)] = Task {
+    using(config.storage.reader(src.bucket, src.prefix).asInputStream) { in =>
+      using(new BufferedOutputStream(new FileOutputStream(dest))) { out =>
+        Await.ready(copyStream(config)(in, out).foreach(_ => ()), config.timeout)
       }
     }
-
     (src, dest)
-
-  }.memoizeOnSuccess
-
-
-  /**
-    * Delete *target* object from Google Cloud Storage.
-    * @param storage Storage object
-    * @param target the URL of an object to delete
-    * @return Right of URL that is completed deleting or Left of URL if the object does not exist.
-    */
-  def delete(storage: Storage, target: GcsObjectUrl): Task[Either[GcsObjectUrl, GcsObjectUrl]] = Task {
-
-    if (storage.delete(BlobId.of(target.bucket, target.prefix))) Right(target)
-    else Left(target)
-
   }.memoizeOnSuccess
 
 }

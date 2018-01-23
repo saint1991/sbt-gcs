@@ -22,8 +22,6 @@ import sbt._
 
 trait GcsKeys {
 
-  type Credentials = com.google.auth.Credentials
-
   /**
     * The task "gcsUpload" uploads a list of files to specified URLs on Google Cloud Storage.
     * Depends on:
@@ -77,6 +75,16 @@ trait GcsKeys {
     * Timeout for each operation against single object.
     */
   val gcsOperationTimeout = SettingKey[FiniteDuration]("gcs-operation-timeout", "Timeout for each operation.")
+
+  /**
+    * Chunk size for uploading/downloading
+    */
+  val gcsChunkSize = SettingKey[Int]("gcs-chunk-size", "chunk size for uploading/downloading.")
+
+  /**
+    * Set true to show progress bar on uploading/downloading
+    */
+  val gcsProgress = SettingKey[Boolean]("gcs-progress", "flg whether shows progress bar on uploading/downloading")
 }
 
 object GcsKeys extends GcsKeys
