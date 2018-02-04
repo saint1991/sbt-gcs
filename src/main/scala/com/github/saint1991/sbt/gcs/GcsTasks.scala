@@ -32,7 +32,8 @@ import monix.reactive.observables.ConnectableObservable
 
 
 /**
-  * Observer that simply copies bytes to OutputStream
+  * Observer that simply copies bytes to OutputStream.
+  * @param out OutputStream to write bytes to
   */
 private [gcs] class StreamCopyObserver(out: OutputStream) extends Observer[Array[Byte]] {
   override def onComplete(): Unit = ()
@@ -51,20 +52,21 @@ object GcsTasks {
 
   /**
     * Delete *target* object from Google Cloud Storage.
-    * @param target
-    * @return Left if the object does not exist otherwise returns Right as the task execution.
+    * @param config GcsTaskConfig to get Storage object according to configured credential
+    * @param target URL of object to delete
+    * @return URL of Left if the object does not exist otherwise returns that of Right as the task execution
     */
   def delete(config: GcsTaskConfig)(target: GcsObjectUrl): Task[Either[GcsObjectUrl, GcsObjectUrl]] = Task {
     if (config.storage.delete(BlobId.of(target.bucket, target.prefix))) Right(target)
     else Left(target)
   }.memoizeOnSuccess
 
-
   /**
-    * Factory of stream copy task with given observers.
-    * @param in
-    * @param out
-    * @param scheduler
+    * Factory of stream copy task with configured observers.
+    * @param config Configuration of a copy task such as chunk size and observers
+    * @param in InputStream to read bytes from
+    * @param out OutputStream to write bytes to
+    * @param scheduler Monix scheduler
     * @return
     */
   private [gcs] def copyStream(config: GcsTaskConfig)(in: InputStream, out:OutputStream)
@@ -79,13 +81,13 @@ object GcsTasks {
     blueprint
   }
 
-
   /**
-    * Upload *src* file to the *dest* URL on Google Cloud Storage.
-    * @param src
-    * @param dest
-    * @param scheduler
-    * @return the tuple of uploaded (src, dest) pair as the result of task execution.
+    * Upload a *src* file to a *dest* URL on Google Cloud Storage.
+    * @param config Configuration of a upload task
+    * @param src a file to upload
+    * @param dest a destination URL to upload *src* to
+    * @param scheduler Monix scheduler
+    * @return the tuple of uploaded (src, dest) pair as the result of task execution
     */
   def upload(config: GcsTaskConfig)(src: File, dest: GcsObjectUrl)
             (implicit scheduler: Scheduler): Task[(File, GcsObjectUrl)] = {
@@ -109,11 +111,11 @@ object GcsTasks {
   }
 
   /**
-    * Download *src* object from Google Cloud Storage as the *src* file.
-    * @param src
-    * @param dest
-    * @param scheduler
-    * @return the tuple of downloaded (src, dest) pair as the result of task execution.
+    * Download *src* object from Google Cloud Storage as the *dest* file.
+    * @param src URL of object to download
+    * @param dest destination file
+    * @param scheduler Monix scheduler
+    * @return the tuple of downloaded (src, dest) pair as the result of task execution
     */
   def download(config: GcsTaskConfig)(src: GcsObjectUrl, dest: File)
               (implicit scheduler: Scheduler): Task[(GcsObjectUrl, File)] = Task {

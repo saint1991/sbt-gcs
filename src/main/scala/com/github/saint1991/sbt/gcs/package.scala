@@ -52,8 +52,8 @@ package object gcs {
   object Converters {
 
     /**
-      * Wrapper of ReadChannel to handle it as InputStream
-      * @param in ReadChannel from GCS
+      * Wrapper of ReadChannel to handle it as InputStream.
+      * @param in ReadChannel of Google Cloud Storage
       */
     class GcsInputStream(private val in: ReadChannel) extends InputStream {
 
@@ -74,8 +74,8 @@ package object gcs {
     }
 
     /**
-      * Wrapper of WriteChannel to handle it as OutputStream
-      * @param out WriteChannel to GCS
+      * Wrapper of WriteChannel to handle it as OutputStream.
+      * @param out WriteChannel of Google Cloud Storage
       */
     class GcsOutputStream(private val out: WriteChannel) extends OutputStream {
       override def close(): Unit = if(out != null) out.close()

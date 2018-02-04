@@ -89,18 +89,18 @@ class ProgressBar(private [gcs] val maxValues: Seq[(String, Long)]) {
 
 /**
   * Progress bar indicator for asynchronous multi tasks.
-  * Showing progresses via the given Logger.
+  * Rendering via the given Logger.
   * @param maxValues the pairs of (object name, object size)
-  * @param logger
+  * @param logger sbt logger
   */
 class LoggingProgressBar(maxValues: Seq[(String, Long)], logger: Logger) extends ProgressBar(maxValues) {
   override def print(str: String): Unit = logger.info(str)
 }
 
 /**
-  *
-  * @param taskIndex
-  * @param progressBar
+  * Observer of InputStream that indicates the progress of a certain task identified by *taskIndex*.
+  * @param taskIndex index of corresponding task in *maxValues* passed to ProgressBar
+  * @param progressBar ProgressBar instance
   */
 class ProgressObserver(taskIndex: TaskIndex, progressBar: ProgressBar) extends Observer[Array[Byte]] {
 

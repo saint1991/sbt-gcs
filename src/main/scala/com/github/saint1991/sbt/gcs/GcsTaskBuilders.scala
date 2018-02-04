@@ -24,11 +24,17 @@ import monix.execution.Scheduler
 import monix.reactive.Observer
 import sbt.File
 
-
+/**
+  * Configuration of GCS tasks
+  * @param credential credential used to communicate with Google Cloud Storage
+  * @param timeout timeout of a task
+  * @param chunkSize chunk size for data transfer
+  * @param observers observers of data stream
+  */
 sealed case class GcsTaskConfig private [gcs](
-  credential: Option[Credentials] = None,
-  chunkSize: ChunkSize = 8192,
-  timeout: Duration = 10 minutes,
+  credential: Option[Credentials] = Defaults.DefaultCredential,
+  timeout: Duration = Defaults.DefaultTimeout,
+  chunkSize: ChunkSize = Defaults.DefaultChunkSize,
   observers: Seq[Observer[Array[Byte]]] = Seq.empty
 ) extends StorageProvider
 
@@ -42,6 +48,10 @@ object GcsTaskFactory {
   def download = new GcsDownloadFactory()
 }
 
+/**
+  * Factory class that constructs configuration of GCS tasks
+  * @tparam T
+  */
 class GcsTaskFactory[T <: GcsOperation] protected {
 
   protected var config: GcsTaskConfig = GcsTaskConfig()
@@ -65,12 +75,23 @@ class GcsTaskFactory[T <: GcsOperation] protected {
   }
 }
 
+/**
+  * Factory of delete task
+  */
 class GcsDeleteFactory private [gcs] extends GcsTaskFactory[GcsOperation] {
   def create(url: GcsObjectUrl)(implicit scheduler: Scheduler): Task[Either[GcsObjectUrl, GcsObjectUrl]] = GcsTasks.delete(config)(url)
 }
+
+/**
+  * Factory of upload task
+  */
 class GcsUploadFactory private [gcs]  extends GcsTaskFactory[GcsTransfer] {
   def create(src: File, dest: GcsObjectUrl)(implicit scheduler: Scheduler): Task[(sbt.File, GcsObjectUrl)] = GcsTasks.upload(config)(src, dest)
 }
+
+/**
+  * Factory of download task
+  */
 class GcsDownloadFactory private [gcs] extends GcsTaskFactory[GcsTransfer] {
   def create(src: GcsObjectUrl, dest: File)(implicit scheduler: Scheduler): Task[(GcsObjectUrl, sbt.File)] = GcsTasks.download(config)(src, dest)
 }

@@ -27,7 +27,7 @@ import monix.reactive.Observable
 import monix.execution.Scheduler.Implicits.global
 
 /**
-  * GcsPlugin is a sbt plugin that can perform basic operations on objects on Google Cloud Storage.
+  * GcsPlugin is an sbt plugin that can perform basic operations against objects on Google Cloud Storage.
   */
 object GcsPlugin extends AutoPlugin {
 
@@ -36,6 +36,7 @@ object GcsPlugin extends AutoPlugin {
   object autoImport extends GcsKeys
   import autoImport._
 
+  // to handle Ctrl + C
   private def addSignalHandler(f: (Int) => Unit) = {
     val handler = (code: Int) => () => {
       f(code)
@@ -58,6 +59,7 @@ object GcsPlugin extends AutoPlugin {
     op(credential, items, parallelism, timeout, chunkSize, reportProgress, logger)
   }
 
+  // Initialize SettingKeys and TaskKeys of GcsPlugin.
   private val gcsSettings = Seq(
 
     gcsDelete := gcsInitTask[String, String](gcsDelete, gcsUrls) {
@@ -132,15 +134,16 @@ object GcsPlugin extends AutoPlugin {
 
     }.value,
 
-    gcsCredential := None,
+    gcsCredential := Defaults.DefaultCredential,
     mappings in gcsUpload := Seq.empty,
     mappings in gcsDownload := Seq.empty,
     gcsUrls in gcsDelete := Seq.empty,
-    gcsOperationParallelism := 8,
-    gcsOperationTimeout := 5.minutes,
-    gcsChunkSize := 8192,
+    gcsOperationParallelism := Defaults.DefaultParallelism,
+    gcsOperationTimeout := Defaults.DefaultTimeout,
+    gcsChunkSize := Defaults.DefaultChunkSize,
     gcsProgress := false
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = super.projectSettings ++ gcsSettings
 }
+

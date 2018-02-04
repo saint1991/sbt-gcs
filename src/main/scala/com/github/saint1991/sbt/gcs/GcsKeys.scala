@@ -16,33 +16,15 @@
 
 package com.github.saint1991.sbt.gcs
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 import sbt._
 
+/**
+  * SettingKeys and TaskKeys of GcsPlugin
+  */
 trait GcsKeys {
-
-  /**
-    * The task "gcsUpload" uploads a list of files to specified URLs on Google Cloud Storage.
-    * Depends on:
-    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
-    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
-    *   - `mappings`: source file -> destination URL mappings.
-    *
-    * Returns: a sequence of uploaded object URLs.
-    */
-  val gcsUpload = TaskKey[Seq[String]]("gcs-upload", "Uploads files to a bucket on Google Cloud Storage.")
-
-  /**
-    * The task "gcsDownload" downloads a lust of objects on Google Cloud Storage to specified files.
-    * Depends on:
-    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
-    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
-    *   - `mappings`: destination file <- source URL mappings.
-    *
-    * Returns: a sequence of downloaded files.
-    */
-  val gcsDownload = TaskKey[Seq[File]]("gcs-download", "Downloads objects from Google Cloud Storage.")
 
   /**
     * The task "gcsDelete" deletes a specified list of objects from Google Cloud Storage.
@@ -50,10 +32,39 @@ trait GcsKeys {
     *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
     *                      as stated [here](https://developers.google.com/identity/protocols/application-default-credentials)
     *   - `gcsUrls`:       a list of object URLs to delete from Google Cloud Storage.
-    *
-    * Returns: a sequence of deleted object URLs. Note that those of inexistent objects are not included in the result.
+    *   - `gcsOperationParallelism`: the parallelism of object deletion
+    *   - `gcsOperationTimeout`: timeout duration of the whole gcsDelete task
+    * Returns: a list of deleted object URLs. Note that those of inexistent objects are not included in the result.
     */
-  val gcsDelete = TaskKey[Seq[String]]("gcs-delete", "Deletes files from a bucket on Google Cloud Storage.")
+  val gcsDelete = TaskKey[Seq[String]]("gcs-delete", "Deletes objects from a bucket on Google Cloud Storage.")
+
+  /**
+    * The task "gcsUpload" uploads a list of files to specified URLs on Google Cloud Storage.
+    * Depends on:
+    *   - `mappings`: source file -> destination URL mappings.
+    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
+    *   - `gcsOperationParallelism`: the parallelism of file uploading
+    *   - `gcsOperationTimeout`: timeout duration of each uploading and the whole gcsUpload task
+    *   - `gcsChunkSize`: the chunk size of data on uploading
+    *   - `gcsProgress`: the flag whether showing a progress bar on uploading
+    * Returns: a sequence of uploaded object URLs.
+    */
+  val gcsUpload = TaskKey[Seq[String]]("gcs-upload", "Uploads files to a bucket on Google Cloud Storage.")
+
+  /**
+    * The task "gcsDownload" downloads a list of objects on Google Cloud Storage to specified files.
+    * Depends on:
+    *   - `mappings`: source object URL -> destination file mappings.
+    *   - `gcsCredential`: Credentials object for Google Cloud Platform. If not provided, default credential is used
+    *                      as stated [here](https://cloud.google.com/video-intelligence/docs/common/auth)
+    *   - `gcsOperationParallelism`: the parallelism of object downloading
+    *   - `gcsOperationTimeout`: timeout duration of each downloading and the whole gcsDownload task
+    *   - `gcsChunkSize`: the chunk size of data on downloading
+    *   - `gcsProgress`: the flag whether showing a progress bar on downloading
+    * Returns: a list of downloaded files.
+    */
+  val gcsDownload = TaskKey[Seq[File]]("gcs-download", "Downloads objects from Google Cloud Storage.")
 
 
   /**
@@ -62,29 +73,39 @@ trait GcsKeys {
   val gcsCredential = SettingKey[Option[Credentials]]("gcs-credential", "Credential to authenticate Google Cloud Storage")
 
   /**
-    * a list of object URLs on which a certain operation should be performed.
+    * a list of object URLs on which a certain operation will be performed.
     */
-  val gcsUrls = TaskKey[Seq[String]]("gcs-urls", "URLs of objects on Google Cloud Storage")
+  val gcsUrls = TaskKey[Seq[String]]("gcs-urls", "a list of object URLs on Google Cloud Storage")
 
   /**
-    * Maximum parallelism of executing operations (i.e. uploading, downloading, deleting).
+    * the parallelism of operations (i.e. uploading, downloading, deleting).
     */
-  val gcsOperationParallelism = SettingKey[Int]("gcs-task-parallelism", "Maximum parallelism of operations.")
+  val gcsOperationParallelism = SettingKey[Int]("gcs-task-parallelism", "the parallelism of operations")
 
   /**
-    * Timeout for each operation against single object.
+    * the timeout for an operation against single object and the whole task.
     */
-  val gcsOperationTimeout = SettingKey[FiniteDuration]("gcs-operation-timeout", "Timeout for each operation.")
+  val gcsOperationTimeout = SettingKey[FiniteDuration]("gcs-operation-timeout", "the timeout for each operation")
 
   /**
-    * Chunk size for uploading/downloading
+    * the chunk size for data transfer
     */
-  val gcsChunkSize = SettingKey[Int]("gcs-chunk-size", "chunk size for uploading/downloading.")
+  val gcsChunkSize = SettingKey[Int]("gcs-chunk-size", "the chunk size for uploading/downloading.")
 
   /**
-    * Set true to show progress bar on uploading/downloading
+    * the flag whether showing a progress bar on uploading/downloading.
+    * Set true to show it. (default false)
     */
-  val gcsProgress = SettingKey[Boolean]("gcs-progress", "flg whether shows progress bar on uploading/downloading")
+  val gcsProgress = SettingKey[Boolean]("gcs-progress", "the flag whether showing progress bar on uploading/downloading")
 }
 
 object GcsKeys extends GcsKeys
+
+
+object Defaults {
+  final val DefaultCredential: Option[Credentials] = None
+  final val DefaultParallelism = 8
+  final val DefaultChunkSize = 8192
+  final val DefaultTimeout = 10 minutes
+  final val DefaultReportProgress = false
+}
