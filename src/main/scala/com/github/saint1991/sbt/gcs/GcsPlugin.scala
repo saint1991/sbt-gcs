@@ -23,12 +23,11 @@ import scala.language.postfixOps
 import sbt._
 import sbt.Keys._
 import sbt.util.Logger
-import com.google.cloud.storage.{Storage, StorageOptions}
 import monix.reactive.Observable
 import monix.execution.Scheduler.Implicits.global
 
 /**
-  * GcsPlugin is a sbt plugin that can perform basic operations on objects on Google Cloud Storage.
+  * GcsPlugin is an sbt plugin that can perform basic operations against objects on Google Cloud Storage.
   */
 object GcsPlugin extends AutoPlugin {
 
@@ -37,11 +36,7 @@ object GcsPlugin extends AutoPlugin {
   object autoImport extends GcsKeys
   import autoImport._
 
-  private def getStorage(credentials: Option[Credentials]): Storage = (credentials match {
-    case Some(c) => StorageOptions.newBuilder().setCredentials(c).build()
-    case None => StorageOptions.getDefaultInstance
-  }).getService
-
+  // to handle Ctrl + C
   private def addSignalHandler(f: (Int) => Unit) = {
     val handler = (code: Int) => () => {
       f(code)
@@ -52,69 +47,103 @@ object GcsPlugin extends AutoPlugin {
 
   private def gcsInitTask[Item, Return](
     thisTask: TaskKey[Seq[Return]],
-    itemsKey: TaskKey[Seq[Item]])
-  (
-    op: (Storage, Seq[Item], Parallelism, FiniteDuration, Logger) => Seq[Return]
-  ) = Def.task {
-    val logger = streams.value.log
+    itemsKey: TaskKey[Seq[Item]]
+  )(op: (Option[Credentials], Seq[Item], Parallelism, FiniteDuration, ChunkSize, ReportProgress, Logger) => Seq[Return]) = Def.task {
     val credential = (gcsCredential in thisTask).value
     val items = (itemsKey in thisTask).value
     val parallelism = (gcsOperationParallelism in thisTask).value
     val timeout = (gcsOperationTimeout in thisTask).value
-    val storage = getStorage(credential)
-    op(storage, items, parallelism, timeout, logger)
+    val chunkSize = (gcsChunkSize in thisTask).value
+    val reportProgress = (gcsProgress in thisTask).value
+    val logger = streams.value.log
+    op(credential, items, parallelism, timeout, chunkSize, reportProgress, logger)
   }
 
+  // Initialize SettingKeys and TaskKeys of GcsPlugin.
   private val gcsSettings = Seq(
 
-    gcsUpload := gcsInitTask[(File, String), String](gcsUpload, mappings) { (storage, mappings, parallelism, timeout, logger) =>
-       val cancelable = Observable.fromIterable(mappings map {
-         case (s, d) => (s, GcsObjectUrl(d))
-       }).mapAsync(parallelism) { case (src, dest) =>
-         GcsTasks.upload(storage, src, dest)
-       }.map { case (file, url) =>
-         logger.info(s"Uploaded ${file.getAbsolutePath} to ${url.url}")
-         url.url
-       }.toListL.runAsync
-       addSignalHandler { _ => cancelable.cancel() }
-       Await.result(cancelable, timeout)
-    }.value,
+    gcsDelete := gcsInitTask[String, String](gcsDelete, gcsUrls) {
+      (credential, urls, parallelism, timeout, _, _, logger) =>
 
-    gcsDownload := gcsInitTask[(File, String), File](gcsDownload, mappings) { (storage, mappings, parallelism, timeout, logger) =>
-      val cancelable = Observable.fromIterable(mappings map {
-        case (d, s) => (GcsObjectUrl(s), d)
-      }).mapAsync(parallelism) { case (src, dest) =>
-        GcsTasks.download(storage, src, dest)
-      }.map { case (url, file) =>
-        logger.info(s"Downloaded ${url.url} to ${file.getAbsolutePath}")
-        file
-      }.toListL.runAsync
+      val taskFactory = GcsTaskFactory.delete.withCredential(credential)
+      val tasks = Observable.fromIterable(urls.map(GcsObjectUrl.apply).map { url =>
+        taskFactory.create(url)
+      }).mapAsync(parallelism)(identity) map { url =>
+        url match {
+          case Left(u) => logger.info(s"Object did not exist: ${u.url}.")
+          case Right(u) => logger.info(s"Deleted ${u.url}.")
+        }
+        url
+      } collect { case Right(url) => url.url }
+
+      val cancelable = tasks.toListL.runAsync
       addSignalHandler { _ => cancelable.cancel() }
       Await.result(cancelable, timeout)
     }.value,
 
-    gcsDelete := gcsInitTask[String, String](gcsDelete, gcsUrls) { (storage, urls, parallelism, timeout, logger) =>
-      val cancelable = Observable.fromIterable(urls.map(GcsObjectUrl.apply)).mapAsync(parallelism) { target =>
-        GcsTasks.delete(storage, target)
-      }.map {
-        case Left(u) =>
-          logger.info(s"${u.url} not found.")
-          None
-        case Right(u) =>
-          logger.info(s"Deleted ${u.url}.")
-          Some(u)
-      }.collect { case Some(u) => u.url }.toListL.runAsync
-      addSignalHandler { _ => cancelable.cancel() }
-      Await.result(cancelable, timeout)
+    gcsUpload := gcsInitTask[(File, String), String](gcsUpload, mappings) {
+      (credential, mps, parallelism, timeout, chunkSize, reportProgress, logger) =>
+
+        val mappings = mps.map { case (src, dest) => src -> GcsObjectUrl(dest) }.zipWithIndex
+        val taskFactory = GcsTaskFactory.upload.withCredential(credential).withChunkSize(chunkSize)
+
+        // create progress bar. this will be evaluated only if reportProgress is true.
+        lazy val progressBar: LoggingProgressBar = {
+          val pb = new LoggingProgressBar(mappings.map { case (f, _) => f._1.name -> f._1.length }, logger)
+          pb.initRender()
+          pb
+        }
+
+        val tasks = Observable.fromIterable(mappings.map { case ((src, dest), taskIndex) => (
+          if (reportProgress) taskFactory.withObservers(Seq(new ProgressObserver(taskIndex, progressBar)))
+          else taskFactory
+        ).create(src, dest)}).mapAsync(parallelism)(identity).map(_._2.url)
+
+        val cancelable = tasks.toListL.runAsync
+        addSignalHandler { _ => cancelable.cancel() }
+        Await.result(cancelable, timeout)
+
     }.value,
 
-    gcsCredential := None,
-    gcsOperationParallelism := 8,
-    gcsOperationTimeout := 5.minutes,
+
+    gcsDownload := gcsInitTask[(File, String), File](gcsDownload, mappings) {
+      (credential, mps, parallelism, timeout, chunkSize, reportProgress, logger) =>
+
+        val mappings = mps.map { case (src, dest) => GcsObjectUrl(dest) -> src }.zipWithIndex
+        val taskFactory = GcsTaskFactory.download.withCredential(credential).withChunkSize(chunkSize)
+
+        // create progress bar. this will be evaluated only if reportProgress is true.
+        lazy val progressBar = {
+          val storage = getStorage(credential)
+          val pb = new LoggingProgressBar(mappings.map { case ((src, _), _) =>
+            val blob = storage.get(src.bucket, src.prefix)
+            src.url -> blob.getSize.toLong
+          }, logger)
+          pb.initRender()
+          pb
+        }
+
+        val tasks = Observable.fromIterable(mappings.map { case ((src, dest), taskIndex) => (
+          if (reportProgress) taskFactory.withObservers(Seq(new ProgressObserver(taskIndex, progressBar)))
+          else taskFactory
+        ).create(src, dest)}).mapAsync(parallelism)(identity).map(_._2)
+
+        val cancelable = tasks.toListL.runAsync
+        addSignalHandler { _ => cancelable.cancel() }
+        Await.result(cancelable, timeout)
+
+    }.value,
+
+    gcsCredential := Defaults.DefaultCredential,
     mappings in gcsUpload := Seq.empty,
     mappings in gcsDownload := Seq.empty,
-    gcsUrls in gcsDelete := Seq.empty
+    gcsUrls in gcsDelete := Seq.empty,
+    gcsOperationParallelism := Defaults.DefaultParallelism,
+    gcsOperationTimeout := Defaults.DefaultTimeout,
+    gcsChunkSize := Defaults.DefaultChunkSize,
+    gcsProgress := false
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = super.projectSettings ++ gcsSettings
 }
+

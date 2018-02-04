@@ -22,8 +22,8 @@ import scala.util.matching.Regex.Groups
 
 /**
   * Model class that represents object URL on Google Cloud Storage
-  * @param bucket
-  * @param prefix
+  * @param bucket bucket name
+  * @param prefix object prefix
   */
 case class GcsObjectUrl(bucket: String, prefix: String) {
   import GcsObjectUrl._

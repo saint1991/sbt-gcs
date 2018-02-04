@@ -93,6 +93,26 @@ gcsCredential := Some(
 )
 ```
 
+## Tasks
+| Name        | Description                                           |
+|:-----------:|:-----------------------------------------------------:|
+| gcsDelete   | Deletes objects from a bucket on Google Cloud Storage |
+| gcsUpload   | Uploads files to a bucket on Google Cloud Storage     |
+| gcsDownload | Downloads objects from Google Cloud Storage           |
+
+
+## Settings
+
+| Name                    | Default    | Description                                                    |
+|:-----------------------:|:----------:|:--------------------------------------------------------------:|
+| gcsCredential           | None       | Credential to authenticate Google Cloud Storage                |
+| gcsUrls                 | Seq()      | URLs to delete                                                 |
+| gcsOperationParallelism | 8          | The parallelism of operations                                  |
+| gcsOperationTimeout     | 10 minutes | The timeout for each operation                                 |
+| gcsChunkSize            | 8192 bytes | The chunk size for data transfer                               |
+| gcsProgress             | false      | The flag whether showing progress bar on uploading/downloading |
+
+
 
 ## License
 This code is open source software licensed under the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0)
