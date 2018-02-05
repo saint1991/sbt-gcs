@@ -85,7 +85,7 @@ class GcsDeleteFactory private [gcs] extends GcsTaskFactory[GcsOperation] {
 /**
   * Factory of upload task
   */
-class GcsUploadFactory private [gcs]  extends GcsTaskFactory[GcsTransfer] {
+class GcsUploadFactory private [gcs] extends GcsTaskFactory[GcsTransfer] {
   def create(src: File, dest: GcsObjectUrl)(implicit scheduler: Scheduler): Task[(sbt.File, GcsObjectUrl)] = GcsTasks.upload(config)(src, dest)
 }
 
