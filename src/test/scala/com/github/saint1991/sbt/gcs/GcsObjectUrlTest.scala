@@ -4,7 +4,7 @@ import org.scalatest._
 
 class GcsObjectUrlTest extends WordSpec with Matchers {
 
-  "GcsObjectUrl class" when {
+  "GcsObjectUrl instance" when {
 
     "URL is valid" should {
       "be constructed correctly" in {
