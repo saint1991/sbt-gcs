@@ -1,0 +1,2 @@
+# gcsUrls contains an invalid URL therefore it should fail.
+-> gcsDelete
