@@ -15,7 +15,7 @@ In order to add the sbt-gcs plugin to your build, add the following to `project/
 
 ```project/plugins.sbt
 resolvers += Resolver.bintrayIvyRepo("saint1991", "sbt-plugins")
-addSbtPlugin("com.github.saint1991" % "sbt-gcs" % "0.1.0")
+addSbtPlugin("com.github.saint1991" % "sbt-gcs" % "0.2.0")
 ```
 
 This plugin automatically add some tasks to manipulate Google Cloud Storage.
