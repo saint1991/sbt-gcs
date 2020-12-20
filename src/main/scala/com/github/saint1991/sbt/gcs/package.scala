@@ -16,14 +16,14 @@
 
 package com.github.saint1991.sbt
 
-import java.io.{InputStream, OutputStream}
+import java.io.{ InputStream, OutputStream }
 import java.nio.ByteBuffer
 
 import scala.language.reflectiveCalls
 import scala.util.control.Exception._
 
-import com.google.cloud.{ReadChannel, WriteChannel}
-import com.google.cloud.storage.{Storage, StorageOptions}
+import com.google.cloud.{ ReadChannel, WriteChannel }
+import com.google.cloud.storage.{ Storage, StorageOptions }
 
 package object gcs {
 
@@ -34,27 +34,26 @@ package object gcs {
   type ReportProgress = Boolean
 
   /**
-    * Utility for Load Pattern
-    * @param resource closable resource
-    * @param f operation using the resource
-    * @tparam Return type of result of f
-    * @tparam Resource type of closable Resource
-    * @return
-    */
-  private [gcs] def using[
+   * Utility for Load Pattern
+   * @param resource closable resource
+   * @param f operation using the resource
+   * @tparam Return type of result of f
+   * @tparam Resource type of closable Resource
+   * @return
+   */
+  private[gcs] def using[
     Return,
     Resource <: { def close(): Unit }
   ](resource: Resource)(f: Resource => Return): Return = allCatch andFinally {
     if (resource != null) resource.close()
   } apply f(resource)
 
-
   object Converters {
 
     /**
-      * Wrapper of ReadChannel to handle it as InputStream.
-      * @param in ReadChannel of Google Cloud Storage
-      */
+     * Wrapper of ReadChannel to handle it as InputStream.
+     * @param in ReadChannel of Google Cloud Storage
+     */
     class GcsInputStream(private val in: ReadChannel) extends InputStream {
 
       override def close(): Unit = if (in != null) in.close()
@@ -74,15 +73,14 @@ package object gcs {
     }
 
     /**
-      * Wrapper of WriteChannel to handle it as OutputStream.
-      * @param out WriteChannel of Google Cloud Storage
-      */
+     * Wrapper of WriteChannel to handle it as OutputStream.
+     * @param out WriteChannel of Google Cloud Storage
+     */
     class GcsOutputStream(private val out: WriteChannel) extends OutputStream {
-      override def close(): Unit = if(out != null) out.close()
+      override def close(): Unit = if (out != null) out.close()
       override def write(b: Int): Unit = out.write(ByteBuffer.wrap(Array[Byte](b.toByte)))
       override def write(b: Array[Byte], off: Int, len: Int): Unit = out.write(ByteBuffer.wrap(b, off, len))
     }
-
 
     implicit class GcsReadChannel(val self: ReadChannel) extends AnyVal {
       def asInputStream = new GcsInputStream(self)
@@ -94,8 +92,8 @@ package object gcs {
   }
 
   /**
-    * Storage mixin according to credential.
-    */
+   * Storage mixin according to credential.
+   */
   trait StorageProvider {
     protected val credential: Option[Credentials]
     lazy val storage: Storage = getStorage(credential)

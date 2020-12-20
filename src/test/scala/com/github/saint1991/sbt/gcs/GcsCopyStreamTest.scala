@@ -1,12 +1,13 @@
 package com.github.saint1991.sbt.gcs
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ ByteArrayInputStream, ByteArrayOutputStream }
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-import org.scalatest.{Matchers, WordSpec}
+import org.scalatest.matchers._
+import org.scalatest.wordspec.AnyWordSpec
 import monix.execution.Scheduler.Implicits.global
 
 object GcsCopyStreamTest {
@@ -14,7 +15,7 @@ object GcsCopyStreamTest {
   final val chunkSize = 12
 }
 
-class GcsCopyStreamTest extends WordSpec with Matchers {
+class GcsCopyStreamTest extends AnyWordSpec with should.Matchers {
 
   import GcsCopyStreamTest._
 
@@ -27,7 +28,7 @@ class GcsCopyStreamTest extends WordSpec with Matchers {
         GcsTasks.copyStream(GcsTaskConfig(chunkSize = chunkSize))(in, out).foreach(_ => ()),
         1 minute
       )
-      out.toString("UTF-8") should equal (sampleText)
+      out.toString("UTF-8") should equal(sampleText)
     }
   }
 }

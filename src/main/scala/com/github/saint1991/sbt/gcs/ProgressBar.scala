@@ -16,15 +16,10 @@
 
 package com.github.saint1991.sbt.gcs
 
+import com.github.saint1991.sbt.gcs.util.{ LoggerPrinter, Printer }
+
 import java.util.concurrent.atomic.AtomicLongArray
-
-import scala.concurrent.Future
-
-import monix.execution.Ack
-import monix.execution.Ack.Continue
-import monix.reactive.Observer
 import sbt.util.Logger
-
 
 object ProgressBar {
   private final val OpenBracket = "["
@@ -36,10 +31,10 @@ object ProgressBar {
 }
 
 /**
-  * Progress bar indicator for asynchronous multi tasks.
-  * @param maxValues the pairs of (object name, object size)
-  */
-class ProgressBar(private [gcs] val maxValues: Seq[(String, Long)]) {
+ * Progress bar indicator for asynchronous multi tasks.
+ * @param maxValues the pairs of (object name, object size)
+ */
+class ProgressBar(private[gcs] val maxValues: Seq[(String, Long)], printer: Printer) {
   import ProgressBar._
 
   private final val length = maxValues.length
@@ -48,16 +43,18 @@ class ProgressBar(private [gcs] val maxValues: Seq[(String, Long)]) {
 
   private val progresses = new AtomicLongArray(length)
 
-  protected def print(str: String): Unit = Console.print(str)
+  private def print(str: String): Unit = printer.print(str)
 
   def setProgress(index: Int, progress: Long): Unit = progresses.set(index, progress)
 
   def initRendered: String = "\n" * length
   def initRender(): Unit = print(initRendered)
 
-  def rendered: String = maxValues.zipWithIndex.foldLeft(new StringBuilder(s"\u001b[${length}A")) {
-    case (builder, ((name, max), index)) => builder.append(createLine(progresses.get(index), max, name))
-  }.toString()
+  def rendered: String = maxValues.zipWithIndex
+    .foldLeft(new StringBuilder(s"\u001b[${length}A")) { case (builder, ((name, max), index)) =>
+      builder.append(createLine(progresses.get(index), max, name))
+    }
+    .toString()
 
   def render(): Unit = print(rendered)
 
@@ -88,34 +85,9 @@ class ProgressBar(private [gcs] val maxValues: Seq[(String, Long)]) {
 }
 
 /**
-  * Progress bar indicator for asynchronous multi tasks.
-  * Rendering via the given Logger.
-  * @param maxValues the pairs of (object name, object size)
-  * @param logger sbt logger
-  */
-class LoggingProgressBar(maxValues: Seq[(String, Long)], logger: Logger) extends ProgressBar(maxValues) {
-  override def print(str: String): Unit = logger.info(str)
-}
-
-/**
-  * Observer of InputStream that indicates the progress of a certain task identified by *taskIndex*.
-  * @param taskIndex index of corresponding task in *maxValues* passed to ProgressBar
-  * @param progressBar ProgressBar instance
-  */
-class ProgressObserver(taskIndex: TaskIndex, progressBar: ProgressBar) extends Observer[Array[Byte]] {
-
-  private var accSize: Long = 0L
-
-  override def onError(ex: Throwable): Unit = throw ex
-  override def onComplete(): Unit = {
-    progressBar.setProgress(taskIndex, progressBar.maxValues(taskIndex)._2)
-    progressBar.render()
-  }
-
-  override def onNext(elem: Array[Byte]): Future[Ack] = {
-    accSize += elem.length
-    progressBar.setProgress(taskIndex, accSize)
-    progressBar.render()
-    Continue
-  }
-}
+ * Progress bar indicator for asynchronous multi tasks.
+ * Rendering via the given Logger.
+ * @param maxValues the pairs of (object name, object size)
+ * @param logger sbt logger
+ */
+class LoggingProgressBar(maxValues: Seq[(String, Long)], logger: Logger) extends ProgressBar(maxValues, new LoggerPrinter(logger))

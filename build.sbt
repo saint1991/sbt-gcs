@@ -1,33 +1,31 @@
-
-val googleCloudVersion = "1.113.4"
+val googleCloudVersion = "1.113.6"
 val monixVersion = "2.3.3"
-val scalaTestVersion = "3.0.4"
+val scalaTestVersion = "3.2.3"
 
-lazy val root = (project in file(".")).
-  enablePlugins(GitVersioning).
-  settings(
+lazy val root = (project in file("."))
+  .enablePlugins(GitVersioning, SbtPlugin)
+  .settings(
     name := "sbt-gcs",
     organization := "com.github.saint1991",
     organizationName := "saint1991",
     description := "GCS Plugin for sbt",
     sbtPlugin := true,
-    scalaVersion := "2.12.4",
-    sbtVersion := "1.1.0",
+    scalaVersion := "2.12.12",
+    sbtVersion := "1.4.5",
     libraryDependencies ++= Seq(
       "com.google.cloud" % "google-cloud-storage" % googleCloudVersion,
       "io.monix" %% "monix-reactive" % monixVersion,
       "org.scalatest" %% "scalatest" % scalaTestVersion % Test
-    )
-  ).
-  settings(
+    ),
+    scriptedBufferLog := false,
+    scriptedLaunchOpts := {
+      scriptedLaunchOpts.value ++ Seq(s"-Dplugin.version=${version.value}")
+    }
+  )
+  .settings(
     publishMavenStyle := false,
     startYear := Some(2018),
     licenses += ("Apache-2.0", new URL("http://www.apache.org/licenses/LICENSE-2.0")),
     bintrayRepository := "sbt-plugins",
     bintrayOrganization in bintray := None
   )
-
-scriptedLaunchOpts := { scriptedLaunchOpts.value ++
-  Seq("-Xmx1024M", s"-Dplugin.version=${version.value}")
-}
-scriptedBufferLog := false

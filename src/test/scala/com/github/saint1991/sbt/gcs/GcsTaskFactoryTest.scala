@@ -4,14 +4,15 @@ import java.security.KeyPairGenerator
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.{ universe => ru }
 
 import com.google.auth.oauth2.ServiceAccountCredentials
 import monix.reactive.Observer
-import org.scalatest.{Matchers, PrivateMethodTester, WordSpec}
+import org.scalatest.matchers._
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.PrivateMethodTester
 
-
-class GcsTaskFactoryTest extends WordSpec with Matchers with PrivateMethodTester {
+class GcsTaskFactoryTest extends AnyWordSpec with should.Matchers with PrivateMethodTester {
 
   type TaskFactory = GcsTaskFactory[GcsTransfer]
 
@@ -29,10 +30,11 @@ class GcsTaskFactoryTest extends WordSpec with Matchers with PrivateMethodTester
     fm.get.asInstanceOf[GcsTaskConfig]
   }
 
-  private lazy val credential  = {
+  private lazy val credential = {
     val keyGen = KeyPairGenerator.getInstance("RSA")
     keyGen.initialize(1024)
-    ServiceAccountCredentials.newBuilder()
+    ServiceAccountCredentials
+      .newBuilder()
       .setClientId("saint1991")
       .setClientEmail("saint1991@email.com")
       .setPrivateKey(keyGen.genKeyPair().getPrivate)
@@ -45,19 +47,21 @@ class GcsTaskFactoryTest extends WordSpec with Matchers with PrivateMethodTester
   "GcsTaskFactory" should {
     "construct GcsTaskConfig by withXXX methods" in {
       val factory = newTaskFactory()
-      getConfig(factory) should equal (GcsTaskConfig())
+      getConfig(factory) should equal(GcsTaskConfig())
 
       val c1 = factory.withCredential(credential)
-      getConfig(c1) should equal (GcsTaskConfig(credential = Some(credential)))
+      getConfig(c1) should equal(GcsTaskConfig(credential = Some(credential)))
 
       val c2 = c1.withChunkSize(1024)
-      getConfig(c2) should equal (GcsTaskConfig(credential = Some(credential), chunkSize = 1024))
+      getConfig(c2) should equal(GcsTaskConfig(credential = Some(credential), chunkSize = 1024))
 
       val c3 = c2.withTimeout(1 second)
-      getConfig(c3) should equal (GcsTaskConfig(credential = Some(credential), chunkSize = 1024, timeout = 1 second))
+      getConfig(c3) should equal(GcsTaskConfig(credential = Some(credential), chunkSize = 1024, timeout = 1 second))
 
       val c4 = c3.withObservers(observers = Seq(observer))
-      getConfig(c4) should equal (GcsTaskConfig(credential = Some(credential), chunkSize = 1024, timeout = 1 second, observers = Seq(observer)))
+      getConfig(c4) should equal(
+        GcsTaskConfig(credential = Some(credential), chunkSize = 1024, timeout = 1 second, observers = Seq(observer))
+      )
     }
   }
 }

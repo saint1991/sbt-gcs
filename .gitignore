@@ -74,6 +74,7 @@ project/plugins/project/
 .history
 .cache
 .lib/
+.bsp/sbt.json
 
 ### Scala ###
 *.class
