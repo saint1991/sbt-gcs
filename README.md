@@ -1,6 +1,6 @@
 # sbt-gcs
 
-[![Build Status](https://travis-ci.org/saint1991/sbt-gcs.svg?branch=master)](https://travis-ci.org/saint1991/sbt-gcs)
+[![Build status](https://github.com/saint1991/sbt-gcs/workflows/ci/badge.svg)](https://github.com/saint1991/sbt-gcs/actions)
 [![Download](https://api.bintray.com/packages/saint1991/sbt-plugins/sbt-gcs/images/download.svg)](https://bintray.com/saint1991/sbt-plugins/sbt-gcs/_latestVersion)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
