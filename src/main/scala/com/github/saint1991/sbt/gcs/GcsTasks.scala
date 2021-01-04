@@ -100,14 +100,12 @@ object GcsTasks {
       .build()
 
     Task {
-      using(new BufferedInputStream(new FileInputStream(src))) { in =>
-        using(config.storage.writer(blobInfo).asOutputStream) { out =>
-          Await.ready(copyStream(config)(in, out).foreach(_ => ()), config.timeout)
-        }
-      }
+      val storage = getStorage(config.credential)
+      storage.create(blobInfo, Files.readAllBytes(src.toPath))
       (src, dest)
     }.memoizeOnSuccess
   }
+
 
   /**
    * Download *src* object from Google Cloud Storage as the *dest* file.
