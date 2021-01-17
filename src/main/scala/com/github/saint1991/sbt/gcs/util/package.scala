@@ -23,6 +23,14 @@ package object util {
 
   implicit val closableReleaser: Releaser[AutoCloseable] = new AutoCloseableReleaser()
 
+  /**
+   * Utility for Load Pattern
+   * @param resource closable resource
+   * @param f operation using the resource
+   * @tparam Return type of result of f
+   * @tparam Resource type of closable Resource
+   * @return
+   */
   def using[Resource: Releaser, Return](resource: => Resource)(f: Resource => Try[Return])(implicit
     releaser: Releaser[Resource]
   ): Try[Return] =

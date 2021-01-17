@@ -16,14 +16,11 @@
 
 package com.github.saint1991.sbt
 
-import java.io.{ InputStream, OutputStream }
-import java.nio.ByteBuffer
+import com.github.saint1991.sbt.gcs.io.{GcsInputStream, GcsOutputStream}
 
 import scala.language.reflectiveCalls
-import scala.util.control.Exception._
-
-import com.google.cloud.{ ReadChannel, WriteChannel }
-import com.google.cloud.storage.{ Storage, StorageOptions }
+import com.google.cloud.{ReadChannel, WriteChannel}
+import com.google.cloud.storage.{Storage, StorageOptions}
 
 package object gcs {
 
@@ -33,54 +30,8 @@ package object gcs {
   type ChunkSize = Int
   type ReportProgress = Boolean
 
-  /**
-   * Utility for Load Pattern
-   * @param resource closable resource
-   * @param f operation using the resource
-   * @tparam Return type of result of f
-   * @tparam Resource type of closable Resource
-   * @return
-   */
-  private[gcs] def using[
-    Return,
-    Resource <: { def close(): Unit }
-  ](resource: Resource)(f: Resource => Return): Return = allCatch andFinally {
-    if (resource != null) resource.close()
-  } apply f(resource)
 
   object Converters {
-
-    /**
-     * Wrapper of ReadChannel to handle it as InputStream.
-     * @param in ReadChannel of Google Cloud Storage
-     */
-    class GcsInputStream(private val in: ReadChannel) extends InputStream {
-
-      override def close(): Unit = if (in != null) in.close()
-
-      override def read(): Int = {
-        val buf = ByteBuffer.wrap(new Array[Byte](1))
-        if (in.read(buf) == -1) -1
-        else buf.get(0).toInt
-      }
-
-      override def read(b: Array[Byte], off: Int, len: Int): Int = {
-        val buf = ByteBuffer.wrap(new Array[Byte](len))
-        val readBytes = in.read(buf)
-        buf.array().copyToArray(b, off, readBytes)
-        readBytes
-      }
-    }
-
-    /**
-     * Wrapper of WriteChannel to handle it as OutputStream.
-     * @param out WriteChannel of Google Cloud Storage
-     */
-    class GcsOutputStream(private val out: WriteChannel) extends OutputStream {
-      override def close(): Unit = if (out != null) out.close()
-      override def write(b: Int): Unit = out.write(ByteBuffer.wrap(Array[Byte](b.toByte)))
-      override def write(b: Array[Byte], off: Int, len: Int): Unit = out.write(ByteBuffer.wrap(b, off, len))
-    }
 
     implicit class GcsReadChannel(val self: ReadChannel) extends AnyVal {
       def asInputStream = new GcsInputStream(self)

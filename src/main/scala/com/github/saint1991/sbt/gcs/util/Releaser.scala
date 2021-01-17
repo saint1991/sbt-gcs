@@ -16,6 +16,7 @@
 
 package com.github.saint1991.sbt.gcs.util
 
+import java.io.Closeable
 import scala.util.Try
 
 trait Releaser[R] {
@@ -24,6 +25,12 @@ trait Releaser[R] {
 
 class AutoCloseableReleaser extends Releaser[AutoCloseable] {
   override def release(resource: AutoCloseable): Try[Unit] = Try(
+    if (resource != null) resource.close()
+  )
+}
+
+class CloseableReleaser extends Releaser[Closeable] {
+  override def release(resource: Closeable): Try[Unit] = Try(
     if (resource != null) resource.close()
   )
 }
